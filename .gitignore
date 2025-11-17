@@ -1,0 +1,30 @@
+## Python cache / bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+## Virtual environments
+.venv/
+venv/
+env/
+
+## OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+## Logs and runtime artifacts
+*.log
+
+## Generated data
+recipients.csv
+leads_greece_2025.sqlite
+
+## Go build artifacts
+scraper
+
+## Selenium / browser artifacts
+selenium-screenshots/
+
+

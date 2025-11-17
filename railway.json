@@ -1,0 +1,11 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "/scraper --config=config.json",
+    "numReplicas": 1
+  }
+}
+
+

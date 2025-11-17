@@ -1,0 +1,14 @@
+{
+  "output_filename": "recipients.csv",
+  "search_term": "Restaurant",
+  "locations": [
+    "Athens"
+  ],
+  "max_results_per_query": 3,
+  "phone_min_digits": 10,
+  "headless": true,
+  "use_threading": false,
+  "max_thread_workers": 1,
+  "scroll_pause_time": 2,
+  "max_scroll_attempts": 10
+}
