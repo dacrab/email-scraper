@@ -22,6 +22,7 @@ RUN python -m pip install --upgrade pip && pip install --no-cache-dir -r require
 COPY scraper.py ./
 COPY config.json ./
 COPY start.sh ./
+COPY app.py ./
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app /ms-playwright
 USER appuser
