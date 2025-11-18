@@ -21,10 +21,11 @@ RUN python -m pip install --upgrade pip && pip install --no-cache-dir -r require
 
 COPY scraper.py ./
 COPY config.json ./
+COPY start.sh ./
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app /ms-playwright
 USER appuser
 
-ENTRYPOINT ["python", "/app/scraper.py", "--config", "/app/config.json"]
+CMD ["/app/start.sh"]
 
 
