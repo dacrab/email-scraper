@@ -3,7 +3,7 @@
     "dockerfile": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "/scraper --config=config.json",
+    "startCommand": "python /app/scraper.py --config=/app/config.json",
     "numReplicas": 1
   }
 }

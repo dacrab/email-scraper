@@ -1,38 +1,30 @@
 # syntax=docker/dockerfile:1
 
-# Build stage
-FROM golang:1.23-bullseye AS builder
+FROM python:3.12-slim
 
-WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Build dependencies for sqlite (CGO)
+# Install basic packages (Playwright will install browser deps itself)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libc6-dev \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY go.mod ./
-RUN go mod download
-
-COPY . .
-
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o scraper main.go
-
-# Final runtime image with Chrome (small headless Chrome image)
-FROM chromedp/headless-shell:latest
+    ca-certificates curl unzip \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy compiled binary
-COPY --from=builder /app/scraper /scraper
+COPY requirements.txt ./
+RUN python -m pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt \
+  && python -m playwright install --with-deps chromium
 
-# Copy default config (can be overridden at runtime)
-COPY config.json /app/config.json
+COPY scraper.py ./
+COPY config.json ./
 
-ENV TZ=Etc/UTC
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app /ms-playwright
+USER appuser
 
-ENTRYPOINT ["/scraper"]
-CMD ["--config=/app/config.json"]
+ENTRYPOINT ["python", "/app/scraper.py", "--config", "/app/config.json"]
 
 

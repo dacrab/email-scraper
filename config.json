@@ -2,15 +2,13 @@
   "output_filename": "recipients.csv",
   "search_term": "Construction Company",
   "locations": [
-    "Thessaloniki",
     "Athens",
-    "Greece"
+    "Thessaloniki"
   ],
-  "max_results_per_query": 0,
-  "phone_min_digits": 10,
+  "max_results_per_query": 10,
   "headless": true,
-  "use_threading": false,
-  "max_thread_workers": 3,
-  "scroll_pause_time": 2,
-  "max_scroll_attempts": 20
+  "scroll_passes": 2,
+  "scroll_pause_seconds": 1.0,
+  "delay_between_queries_seconds_min": 3.0,
+  "delay_between_queries_seconds_max": 5.0
 }
