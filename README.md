@@ -1,22 +1,26 @@
-# Google Maps Email Scraper (Python + Selenium)
+# Google Maps Email Scraper (Python + Playwright)
 
-Automates Google Maps with headless Chrome to collect business websites and extract emails/phones.
-Fully configurable via `config.json` and ready for Docker/Railway deployment.
+Automates Google Maps with headless Chromium (Playwright) to collect business websites and extract emails/phones.
+Config-driven via `config.json`, Docker/Railway ready.
 
 ---
 
-## 1) Prerequisites
+## 1) Requirements
 
 - Python 3.12+
-- Google Chrome or Chromium installed locally
-  - If Chrome is not on PATH, set env var or config:
-    - `export CHROME_BIN=/usr/bin/google-chrome` (or your path)
-    - or set `"chrome_binary"` in `config.json`
+- Playwright Python library (handled by `requirements.txt`)
+- Chromium browser (auto-installed by the app if missing; optional manual install below)
 
-Install Python deps:
+Install deps:
 
 ```bash
 pip install -r requirements.txt
+```
+
+First-time (optional) manual browser install if the auto-install fallback isn’t desired:
+
+```bash
+python -m playwright install chromium
 ```
 
 ---
@@ -46,6 +50,7 @@ Example:
 Notes:
 - `max_results_per_query`: 0 = no cap.
 - `chrome_binary`: optional absolute path to Chrome/Chromium. If omitted, the app tries `CHROME_BIN`/`GOOGLE_CHROME_BIN` or common paths.
+- You can also set `SCRAPER_CONFIG` env var to point to a different config path.
 
 ---
 
@@ -55,7 +60,7 @@ Notes:
 python scraper.py --config config.json
 ```
 
-Output goes to `recipients.csv` (configurable).
+Output goes to `recipients.csv` (configurable). Columns: `Company, Email, Phone, Website` sorted by Company then Email. Tracker/junk emails are filtered.
 
 ---
 
@@ -72,8 +77,10 @@ Run (mount working dir to write CSV and read config):
 ```bash
 docker run --rm \
   -v "$(pwd)":/app \
-  email-scraper \
-  --config=/app/config.json
+  email-scraper:latest
+```
+
+The image ENTRYPOINT already runs `python /app/scraper.py --config /app/config.json`. Override config by mounting a different file or using `-e SCRAPER_CONFIG=/app/your.json`.
 ```
 
 ---
