@@ -167,6 +167,8 @@ class EmailScraper:
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         self.context = self.browser.new_context(user_agent=ua, java_script_enabled=True)
+        # Optimize: Block resources to speed up scraping
+        self.context.route("**/*.{png,jpg,jpeg,gif,webp,svg,css,woff,woff2,mp4,mp3}", lambda route: route.abort())
         self.page = self.context.new_page()
 
     def _accept_gmaps_cookies(self) -> None:
@@ -477,6 +479,8 @@ class EmailScraper:
         for i, url in enumerate(unique_websites, 1):
             print(f"\n[>] Website {i}/{len(unique_websites)} ({int(i / len(unique_websites) * 100)}%)")
             self.scrape_website(url)
+            # Save incrementally so UI updates
+            self.save_results()
             if i % 5 == 0:
                 print(f"\n[>] Progress: {len(self.emails)} emails found so far")
 
