@@ -99,7 +99,7 @@ def is_scraper_running():
         # This is a bit rough, but works for single container
         res = subprocess.check_output(["pgrep", "-f", "scraper.py"])
         return bool(res.strip())
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return False
 
 @app.route('/')

@@ -10,7 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install basic packages (Playwright will install browser deps itself)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl unzip \
+    ca-certificates curl unzip procps \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
