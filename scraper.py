@@ -7,6 +7,7 @@ import random
 import re
 import threading
 import time
+import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 from urllib.parse import urlparse
@@ -135,6 +136,37 @@ class EmailScraper:
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
         self._init_playwright_with_fallback()
+        self._load_existing_data()
+
+    def _load_existing_data(self) -> None:
+        if not os.path.exists(self.output_filename):
+            return
+            
+        print(f"[*] Loading existing data from {self.output_filename}...")
+        try:
+            with open(self.output_filename, "r", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                headers = next(reader, None) # Skip header
+                count = 0
+                for row in reader:
+                    if len(row) < 4:
+                        continue
+                    # Format: Company, Email, Phone, Website
+                    try:
+                        _, email, phone, website = row[:4]
+                    except ValueError:
+                        continue
+                    
+                    if email:
+                        self.emails[email] = website
+                    if website:
+                        self.visited_urls.add(website)
+                        if phone:
+                            self.company_phones[website] = phone
+                    count += 1
+                print(f"[*] Loaded {count} existing records. Resuming...")
+        except Exception as e:
+            print(f"[!] Failed to load existing data: {e}")
 
     def _init_playwright_with_fallback(self) -> None:
         import subprocess
@@ -502,10 +534,17 @@ class EmailScraper:
         # Prettier CSV: Company, Email, Phone, Website (sorted by Company then Email)
         rows = [[d["company"], d["email"], d["phone"], d["website"]] for d in unique_emails.values()]
         rows.sort(key=lambda r: (r[0].lower(), r[1].lower()))
-        with open(filename, "w", newline="", encoding="utf-8") as f:
+        
+        # Atomic write: write to temp file then rename
+        temp_filename = f"{filename}.tmp"
+        with open(temp_filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f, delimiter=",", quoting=csv.QUOTE_MINIMAL)
             writer.writerow(["Company", "Email", "Phone", "Website"])
             writer.writerows(rows)
+        
+        import os
+        os.replace(temp_filename, filename)
+        
         print(f"\n[+] {len(rows)} unique business emails saved in: {filename}")
         return filename
 

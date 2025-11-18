@@ -110,10 +110,16 @@ def index():
         return render_template_string(HTML_TEMPLATE, data=None, running=running, error="Results file not found yet.")
     
     try:
+        # Handle empty or malformed file during writes
+        if os.path.getsize(CSV_FILE) == 0:
+             return render_template_string(HTML_TEMPLATE, data=None, running=running, error="Data file is empty (initializing...)")
+             
         df = pd.read_csv(CSV_FILE)
         # Convert to HTML table
         table_html = df.to_html(classes='table', index=False, border=0)
         return render_template_string(HTML_TEMPLATE, data=table_html, running=running)
+    except pd.errors.EmptyDataError:
+        return render_template_string(HTML_TEMPLATE, data=None, running=running, error="Data file is empty.")
     except Exception as e:
         return render_template_string(HTML_TEMPLATE, data=None, running=running, error=f"Error reading data: {str(e)}")
 
