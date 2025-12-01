@@ -1,172 +1,483 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scraped Data Results</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .container { margin-top: 40px; max-width: 95%; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .card-header { background: white; border-bottom: 1px solid #eee; padding: 20px; border-radius: 12px 12px 0 0 !important; }
-        .btn-download { margin-right: 10px; }
-        .status-badge { font-size: 0.9em; }
-        .dataTables_wrapper { padding: 20px; }
-        .refresh-timer { font-size: 0.8rem; color: #6c757d; margin-top: 5px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Email Scraper{% endblock %}
+
+{% block content %}
+<div x-data="dashboard()" x-init="init()">
+    <!-- Alerts -->
+    {% if error %}
+    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
+         class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <svg class="h-5 w-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-red-700 dark:text-red-300">{{ error }}</span>
+        </div>
+        <button @click="show = false" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors p-1">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
+         class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <svg class="h-5 w-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-green-700 dark:text-green-300">{{ success }}</span>
+        </div>
+        <button @click="show = false" class="text-green-400 hover:text-green-600 dark:hover:text-green-300 transition-colors p-1">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Status Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="mb-0"><i class="fas fa-envelope-open-text text-primary"></i> Email Scraper Results</h2>
-                    <p class="text-muted mb-0">View and manage your scraped contacts</p>
-                </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="text-end">
-                        {% if running %}
-                            <span class="badge bg-warning text-dark status-badge"><i class="fas fa-spinner fa-spin"></i> Running...</span>
-                            <div class="refresh-timer">Auto-refreshing...</div>
-                        {% else %}
-                            <span class="badge bg-success status-badge"><i class="fas fa-check-circle"></i> Completed</span>
-                        {% endif %}
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
+                    <div class="mt-2 flex items-center space-x-2">
+                        <template x-if="isRunning">
+                            <span class="relative flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                            </span>
+                        </template>
+                        <template x-if="!isRunning">
+                            <span class="h-3 w-3 rounded-full bg-green-500"></span>
+                        </template>
+                        <span class="text-lg font-semibold" :class="isRunning ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'" x-text="isRunning ? 'Running' : 'Idle'"></span>
                     </div>
-                    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">
-                        <i class="fas fa-cog"></i> Settings
-                    </button>
+                </div>
+                <div class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
+                    <svg class="h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
                 </div>
             </div>
-            
-            <div class="card-body">
-                {% if error %}
-                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle"></i> {{ error }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endif %}
+        </div>
 
-                {% if success_message %}
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle"></i> {{ success_message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endif %}
-
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                    <div>
-                        <a href="/download/csv" class="btn btn-primary btn-download"><i class="fas fa-file-csv"></i> CSV</a>
-                        <a href="/download/json" class="btn btn-secondary btn-download"><i class="fas fa-file-code"></i> JSON</a>
-                    </div>
-                    <div class="text-muted small">
-                        {% if config %}
-                        Current Search: <strong>{{ config.search_term }}</strong> in {{ config.locations|length }} locations
-                        {% endif %}
-                    </div>
+        <!-- Contacts Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Contacts Found</p>
+                    <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white" x-text="contactCount">{{ count }}</p>
                 </div>
+                <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                    <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
 
-                {% if data %}
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped align-middle">
-                            <thead>
-                                <tr>
-                                    {% if data|length > 0 %}
-                                        {% for key in data[0].keys() %}
-                                            <th>{{ key }}</th>
-                                        {% endfor %}
-                                    {% else %}
-                                        <th>No Data</th>
-                                    {% endif %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in data %}
-                                    <tr>
-                                        {% for value in row.values() %}
-                                            <td>{{ value }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2">Waiting for data... (Refresh page)</p>
-                    </div>
-                {% endif %}
+        <!-- Search Info Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Search</p>
+                    <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white truncate">{{ config.search_term or 'Not configured' }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ config.locations|length }} location(s)</p>
+                </div>
+                <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                    <svg class="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div class="modal fade" id="settingsModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="/update_config" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="fas fa-sliders-h"></i> Scraper Settings</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info small">
-                            <i class="fas fa-info-circle"></i> Saving will restart the scraper with new settings.
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Search Term</label>
-                            <input type="text" class="form-control" name="search_term" value="{{ config.search_term if config else '' }}" required placeholder="e.g. Construction Company">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Locations</label>
-                            <input type="text" class="form-control" name="locations" value="{{ config.locations|join(', ') if config else '' }}" required placeholder="Athens, Thessaloniki">
-                            <div class="form-text">Comma separated list of cities/areas</div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Max Results / Query</label>
-                                <input type="number" class="form-control" name="max_results" value="{{ config.max_results_per_query if config else 10 }}" required min="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Concurrent Pages</label>
-                                <input type="number" class="form-control" name="max_concurrent_pages" value="{{ config.max_concurrent_pages if config else 5 }}" required min="1" max="20">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save & Restart Scraper</button>
-                    </div>
+    <!-- Controls -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap gap-3">
+                <template x-if="isRunning">
+                    <form action="/scraper/stop" method="POST" class="inline">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors shadow-sm">
+                            <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
+                            </svg>
+                            Stop Scraper
+                        </button>
+                    </form>
+                </template>
+                <template x-if="!isRunning">
+                    <form action="/scraper/start" method="POST" class="inline">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors shadow-sm">
+                            <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Start Scraper
+                        </button>
+                    </form>
+                </template>
+                <form action="/scraper/restart" method="POST" class="inline">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors shadow-sm">
+                        <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Restart
+                    </button>
+                </form>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="/download/csv" class="inline-flex items-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors shadow-sm">
+                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Download CSV
+                </a>
+                <a href="/download/json" class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Download JSON
+                </a>
+                <form action="/clear" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to clear all data?')">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors">
+                        <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Clear Data
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('table').addClass('table table-hover table-striped align-middle');
-            $('table').DataTable({
-                "order": [[ 0, "asc" ]],
-                "pageLength": 25,
-                "language": {
-                    "emptyTable": "No data collected yet"
+    <!-- Live Logs Panel -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8 overflow-hidden">
+        <button @click="logsOpen = !logsOpen; if(logsOpen) fetchLogs()" 
+                class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <svg class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Live Logs</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">View scraper activity in real-time</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span x-show="isRunning" class="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                    Live
+                </span>
+                <svg class="h-5 w-5 text-gray-400 transition-transform duration-300" :class="{ 'rotate-180': logsOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+        </button>
+        
+        <div x-show="logsOpen" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-2"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-2"
+             class="border-t border-gray-100 dark:border-gray-700">
+            <!-- Log Controls -->
+            <div class="p-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+                        <input type="checkbox" x-model="autoScroll" class="rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500">
+                        <span>Auto-scroll</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+                        <input type="checkbox" x-model="autoRefresh" class="rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500">
+                        <span>Auto-refresh</span>
+                    </label>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button @click="fetchLogs()" class="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 transition-colors">
+                        Refresh
+                    </button>
+                    <button @click="clearLogs()" class="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 transition-colors">
+                        Clear View
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Log Content -->
+            <div x-ref="logContainer" class="h-80 overflow-y-auto bg-gray-900 p-4 font-mono text-sm leading-relaxed">
+                <template x-if="logs.length === 0">
+                    <p class="text-gray-500">No logs yet. Start the scraper to see activity.</p>
+                </template>
+                <template x-for="(line, index) in logs" :key="index">
+                    <div class="py-0.5 whitespace-pre-wrap break-all" :class="getLogClass(line)" x-text="line"></div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table with Virtual Scrolling -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Scraped Contacts</h2>
+                    <span class="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full" x-text="filteredContacts.length + ' of ' + contacts.length"></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <input type="text" x-model="searchQuery" @input="currentPage = 0" placeholder="Search contacts..."
+                               class="pl-10 pr-4 py-2 w-64 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    <select x-model="pageSize" @change="currentPage = 0" class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                        <option value="25">25 rows</option>
+                        <option value="50">50 rows</option>
+                        <option value="100">100 rows</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <template x-if="contacts.length > 0">
+            <div>
+                <div class="overflow-x-auto max-h-[500px] overflow-y-auto" x-ref="tableContainer">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Website</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <template x-for="(row, index) in paginatedContacts" :key="index">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                    <td class="px-6 py-4">
+                                        <span class="font-medium text-gray-900 dark:text-white" x-text="row.Company || '-'"></span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <a :href="'mailto:' + row.Email" class="text-primary-600 dark:text-primary-400 hover:underline" x-text="row.Email"></a>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+                                        <template x-if="row.Phone">
+                                            <a :href="'tel:' + row.Phone" class="hover:text-primary-600 dark:hover:text-primary-400" x-text="row.Phone"></a>
+                                        </template>
+                                        <template x-if="!row.Phone">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <template x-if="row.Website">
+                                            <a :href="row.Website" target="_blank" class="text-primary-600 dark:text-primary-400 hover:underline truncate block max-w-xs" x-text="row.Website.length > 40 ? row.Website.substring(0, 40) + '...' : row.Website"></a>
+                                        </template>
+                                        <template x-if="!row.Website">
+                                            <span class="text-gray-400">-</span>
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Showing <span class="font-medium" x-text="currentPage * pageSize + 1"></span> to 
+                        <span class="font-medium" x-text="Math.min((currentPage + 1) * pageSize, filteredContacts.length)"></span> of 
+                        <span class="font-medium" x-text="filteredContacts.length"></span> results
+                    </p>
+                    <div class="flex items-center space-x-2">
+                        <button @click="currentPage = Math.max(0, currentPage - 1)" :disabled="currentPage === 0"
+                                class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-200">
+                            Previous
+                        </button>
+                        <span class="text-sm text-gray-600 dark:text-gray-300" x-text="'Page ' + (currentPage + 1) + ' of ' + totalPages"></span>
+                        <button @click="currentPage = Math.min(totalPages - 1, currentPage + 1)" :disabled="currentPage >= totalPages - 1"
+                                class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-200">
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="contacts.length === 0">
+            <div class="p-12 text-center">
+                <svg class="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+                <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No contacts yet</h3>
+                <p class="mt-2 text-gray-500 dark:text-gray-400">Configure your search and start the scraper to find contacts.</p>
+                <a href="/config" class="mt-4 inline-flex items-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors">
+                    Configure Search
+                </a>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function dashboard() {
+    return {
+        searchQuery: '',
+        contactCount: {{ count }},
+        isRunning: {{ 'true' if running else 'false' }},
+        logsOpen: false,
+        logs: [],
+        autoScroll: true,
+        autoRefresh: true,
+        logPollInterval: null,
+        
+        // Contacts & Pagination
+        contacts: [],
+        currentPage: 0,
+        pageSize: 25,
+        
+        get filteredContacts() {
+            if (!this.searchQuery.trim()) return this.contacts;
+            const query = this.searchQuery.toLowerCase();
+            return this.contacts.filter(row => 
+                (row.Company || '').toLowerCase().includes(query) ||
+                (row.Email || '').toLowerCase().includes(query) ||
+                (row.Phone || '').toLowerCase().includes(query) ||
+                (row.Website || '').toLowerCase().includes(query)
+            );
+        },
+        
+        get totalPages() {
+            return Math.max(1, Math.ceil(this.filteredContacts.length / this.pageSize));
+        },
+        
+        get paginatedContacts() {
+            const start = this.currentPage * this.pageSize;
+            return this.filteredContacts.slice(start, start + this.pageSize);
+        },
+        
+        init() {
+            this.fetchContacts();
+            this.pollStatus();
+            this.$watch('logsOpen', (value) => {
+                if (value && this.autoRefresh) {
+                    this.startLogPolling();
+                } else {
+                    this.stopLogPolling();
                 }
             });
-        });
+            this.$watch('autoRefresh', (value) => {
+                if (value && this.logsOpen) {
+                    this.startLogPolling();
+                } else {
+                    this.stopLogPolling();
+                }
+            });
+        },
         
-        // Auto-refresh if running
-        {% if running %}
-        setTimeout(function(){
-           window.location.reload(1);
-        }, 8000);
-        {% endif %}
-    </script>
-</body>
-</html>
+        async fetchContacts() {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                this.contacts = data.data || [];
+                this.contactCount = this.contacts.length;
+            } catch (e) {
+                console.error('Failed to fetch contacts:', e);
+            }
+        },
+        
+        async pollStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                const prevCount = this.contactCount;
+                this.contactCount = data.count;
+                const wasRunning = this.isRunning;
+                this.isRunning = data.running;
+                
+                // Refresh contacts if count changed or scraper just finished
+                if (data.count !== prevCount || (wasRunning && !data.running)) {
+                    this.fetchContacts();
+                    this.fetchLogs();
+                }
+            } catch (e) {
+                console.error('Status poll error:', e);
+            }
+            setTimeout(() => this.pollStatus(), 3000);
+        },
+        
+        startLogPolling() {
+            if (this.logPollInterval) return;
+            this.fetchLogs();
+            this.logPollInterval = setInterval(() => this.fetchLogs(), 2000);
+        },
+        
+        stopLogPolling() {
+            if (this.logPollInterval) {
+                clearInterval(this.logPollInterval);
+                this.logPollInterval = null;
+            }
+        },
+        
+        async fetchLogs() {
+            try {
+                const res = await fetch('/api/logs?lines=200');
+                const data = await res.json();
+                if (data.logs && data.logs !== 'No logs yet') {
+                    this.logs = data.logs.split('\n').filter(line => line.trim());
+                    if (this.autoScroll) {
+                        this.$nextTick(() => {
+                            const container = this.$refs.logContainer;
+                            if (container) {
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Log fetch error:', e);
+            }
+        },
+        
+        clearLogs() {
+            this.logs = [];
+        },
+        
+        getLogClass(line) {
+            if (line.includes('[ERROR]')) return 'text-red-400';
+            if (line.includes('[WARNING]')) return 'text-yellow-400';
+            if (line.includes('[INFO]')) return 'text-green-400';
+            if (line.includes('Found:')) return 'text-cyan-400 font-semibold';
+            if (line.includes('Done!')) return 'text-green-400 font-semibold';
+            return 'text-gray-300';
+        }
+    }
+}
+</script>
+{% endblock %}
