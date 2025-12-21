@@ -1,7 +1,7 @@
-"""Flask web dashboard for email scraper."""
+"""Flask web dashboard for the email scraper."""
 
 import csv
-import json
+import logging
 import os
 import signal
 import subprocess
@@ -10,203 +10,155 @@ from pathlib import Path
 
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 
-from config import BASE_DIR, DEFAULT_CONFIG_FILE, STATIC_DIR, TEMPLATE_DIR, ScraperConfig
+from config import ScraperConfig
 
-app = Flask(__name__, template_folder=str(TEMPLATE_DIR), static_folder=str(STATIC_DIR))
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
+app = Flask(__name__, 
+            template_folder=str(ScraperConfig.TEMPLATE_DIR), 
+            static_folder=str(ScraperConfig.STATIC_DIR))
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 
+class ScraperManager:
+    """Handles the scraper process lifecycle."""
+    
+    @staticmethod
+    def get_pid() -> int | None:
+        if ScraperConfig.PID_FILE.exists():
+            try:
+                return int(ScraperConfig.PID_FILE.read_text().strip())
+            except (ValueError, OSError):
+                return None
+        return None
 
-def get_output_path() -> Path:
-    return ScraperConfig.load().output_path
+    @classmethod
+    def is_running(cls) -> bool:
+        pid = cls.get_pid()
+        if not pid: return False
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            if ScraperConfig.PID_FILE.exists():
+                ScraperConfig.PID_FILE.unlink(missing_ok=True)
+            return False
 
+    @classmethod
+    def start(cls) -> bool:
+        if cls.is_running(): return False
+        
+        with open(ScraperConfig.LOG_FILE, "a") as log:
+            process = subprocess.Popen(
+                ["python3", str(ScraperConfig.BASE_DIR / "scraper.py")],
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                cwd=str(ScraperConfig.BASE_DIR),
+            )
+        ScraperConfig.PID_FILE.write_text(str(process.pid))
+        return True
 
-def is_scraper_running() -> bool:
+    @classmethod
+    def stop(cls) -> bool:
+        pid = cls.get_pid()
+        if not pid: return False
+        try:
+            os.kill(pid, signal.SIGTERM)
+            for _ in range(10): # Graceful wait
+                if not cls.is_running(): return True
+                time.sleep(0.5)
+            os.kill(pid, signal.SIGKILL)
+            return True
+        except OSError:
+            return False
+
+def load_csv_data() -> list[dict]:
+    path = ScraperConfig().output_path
+    if not path.exists() or path.stat().st_size == 0:
+        return []
     try:
-        result = subprocess.run(
-            ["pgrep", "-f", "python.*scraper\\.py"],
-            capture_output=True,
-            text=True
-        )
-        pids = [p for p in result.stdout.strip().split('\n') if p]
-        return len(pids) > 0
-    except Exception:
-        return False
-
-
-LOG_FILE = BASE_DIR / "scraper.log"
-
-
-def start_scraper() -> bool:
-    if is_scraper_running():
-        return False
-    with open(LOG_FILE, "w") as log:
-        subprocess.Popen(
-            ["python3", str(BASE_DIR / "scraper.py")],
-            stdout=log,
-            stderr=subprocess.STDOUT,
-        )
-    return True
-
-
-def stop_scraper() -> bool:
-    try:
-        result = subprocess.run(
-            ["pgrep", "-f", "python.*scraper\\.py"],
-            capture_output=True,
-            text=True
-        )
-        pids = [p for p in result.stdout.strip().split('\n') if p]
-        for pid in pids:
-            os.kill(int(pid), signal.SIGTERM)
-        return len(pids) > 0
-    except Exception:
-        return False
-
-
-def restart_scraper() -> None:
-    stop_scraper()
-    time.sleep(1)
-    start_scraper()
-
-
-def load_data() -> tuple[list[dict], int]:
-    output_path = get_output_path()
-    if not output_path.exists() or output_path.stat().st_size == 0:
-        return [], 0
-    try:
-        with output_path.open() as f:
-            data = list(csv.DictReader(f))
-        return data, len(data)
-    except Exception:
-        return [], 0
-
+        with path.open(encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except Exception as e:
+        app.logger.error(f"Data load error: {e}")
+        return []
 
 @app.route("/")
+@app.route("/dashboard")
 def index():
-    config = ScraperConfig.load()
-    data, count = load_data()
-    error = request.args.get("error")
-    success = request.args.get("success")
-
+    config = ScraperConfig()
+    data = load_csv_data()
     return render_template(
         "index.html",
         data=data,
-        count=count,
-        running=is_scraper_running(),
+        count=len(data),
+        running=ScraperManager.is_running(),
         config=config,
-        error=error,
-        success=success,
+        error=request.args.get("error"),
+        success=request.args.get("success")
     )
-
 
 @app.route("/api/status")
 def api_status():
-    data, count = load_data()
     return jsonify({
-        "running": is_scraper_running(),
-        "count": count,
+        "running": ScraperManager.is_running(),
+        "count": len(load_csv_data())
     })
-
 
 @app.route("/api/data")
 def api_data():
-    data, count = load_data()
-    return jsonify({
-        "data": data,
-        "count": count,
-    })
-
-
-@app.route("/config", methods=["GET", "POST"])
-def config_page():
-    if request.method == "POST":
-        try:
-            config = ScraperConfig(
-                search_term=request.form.get("search_term", "").strip(),
-                locations=[loc.strip() for loc in request.form.get("locations", "").split(",") if loc.strip()],
-                max_results_per_query=int(request.form.get("max_results_per_query", 10)),
-                max_concurrent_pages=int(request.form.get("max_concurrent_pages", 5)),
-                headless=request.form.get("headless") == "on",
-                scroll_pause_time=float(request.form.get("scroll_pause_time", 2.0)),
-                max_scroll_attempts=int(request.form.get("max_scroll_attempts", 20)),
-                delay_min=float(request.form.get("delay_min", 3.0)),
-                delay_max=float(request.form.get("delay_max", 5.0)),
-            )
-            config.save()
-
-            if request.form.get("restart_scraper"):
-                restart_scraper()
-                return redirect(url_for("index", success="Configuration saved and scraper restarted"))
-
-            return redirect(url_for("index", success="Configuration saved"))
-        except Exception as e:
-            return redirect(url_for("index", error=str(e)))
-
-    config = ScraperConfig.load()
-    return render_template("config.html", config=config)
-
-
-@app.route("/scraper/start", methods=["POST"])
-def scraper_start():
-    if start_scraper():
-        return redirect(url_for("index", success="Scraper started"))
-    return redirect(url_for("index", error="Scraper is already running"))
-
-
-@app.route("/scraper/stop", methods=["POST"])
-def scraper_stop():
-    if stop_scraper():
-        return redirect(url_for("index", success="Scraper stopped"))
-    return redirect(url_for("index", error="Failed to stop scraper"))
-
-
-@app.route("/scraper/restart", methods=["POST"])
-def scraper_restart():
-    restart_scraper()
-    return redirect(url_for("index", success="Scraper restarted"))
-
-
-@app.route("/download/<fmt>")
-def download(fmt: str):
-    output_path = get_output_path()
-    if not output_path.exists():
-        return redirect(url_for("index", error="No data to download"))
-
-    if fmt == "csv":
-        return send_file(output_path, as_attachment=True, download_name="contacts.csv")
-
-    if fmt == "json":
-        data, _ = load_data()
-        json_path = BASE_DIR / "contacts.json"
-        with json_path.open("w") as f:
-            json.dump(data, f, indent=2)
-        return send_file(json_path, as_attachment=True, download_name="contacts.json")
-
-    return redirect(url_for("index", error="Unsupported format"))
-
-
-@app.route("/clear", methods=["POST"])
-def clear_data():
-    output_path = get_output_path()
-    if output_path.exists():
-        output_path.unlink()
-    return redirect(url_for("index", success="Data cleared"))
-
+    data = load_csv_data()
+    return jsonify({"data": data, "count": len(data)})
 
 @app.route("/api/logs")
 def api_logs():
     lines = int(request.args.get("lines", 100))
-    if not LOG_FILE.exists():
-        return jsonify({"logs": "No logs yet"})
+    if not ScraperConfig.LOG_FILE.exists():
+        return jsonify({"logs": ""})
     try:
-        with open(LOG_FILE) as f:
+        with open(ScraperConfig.LOG_FILE) as f:
             content = f.readlines()
         return jsonify({"logs": "".join(content[-lines:])})
     except Exception as e:
-        return jsonify({"logs": f"Error reading logs: {e}"})
+        return jsonify({"logs": f"Error: {e}"})
 
+@app.route("/scraper/<action>", methods=["POST"])
+def scraper_control(action):
+    if action == "start":
+        if ScraperManager.start():
+            return redirect(url_for("index", success="Scraper started"))
+        return redirect(url_for("index", error="Already running"))
+    elif action == "stop":
+        if ScraperManager.stop():
+            return redirect(url_for("index", success="Scraper stopped"))
+        return redirect(url_for("index", error="Failed to stop"))
+    elif action == "restart":
+        ScraperManager.stop()
+        time.sleep(1)
+        ScraperManager.start()
+        return redirect(url_for("index", success="Scraper restarted"))
+    return redirect(url_for("index"))
+
+@app.route("/config")
+def config_view():
+    return render_template("config.html", config=ScraperConfig())
+
+@app.route("/download/<fmt>")
+def download(fmt):
+    path = ScraperConfig().output_path
+    if not path.exists():
+        return redirect(url_for("index", error="No data available"))
+    if fmt == "csv":
+        return send_file(path, as_attachment=True, download_name="contacts.csv")
+    if fmt == "json":
+        return jsonify(load_csv_data())
+    return redirect(url_for("index", error="Invalid format"))
+
+@app.route("/clear", methods=["POST"])
+def clear_data():
+    path = ScraperConfig().output_path
+    if path.exists():
+        path.unlink()
+    return redirect(url_for("index", success="Data cleared"))
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host="0.0.0.0", 
+            port=int(os.environ.get("PORT", 8000)), 
+            debug=os.environ.get("FLASK_DEBUG") == "1")

@@ -1,8 +1,5 @@
-# Web framework
 flask>=3.0.0
-
-# Production WSGI server
 gunicorn>=21.0.0
-
-# Browser automation
 playwright>=1.47.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0

@@ -3,481 +3,272 @@
 {% block title %}Dashboard - Email Scraper{% endblock %}
 
 {% block content %}
-<div x-data="dashboard()" x-init="init()">
-    <!-- Alerts -->
+<div x-data="dashboard({ running: {{ running|tojson }}, count: {{ count }} })" x-init="init()">
+    <!-- Notifications -->
     {% if error %}
     <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 8000)"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 -translate-y-2"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 -translate-y-2"
-         class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <svg class="h-5 w-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        class="mb-6 p-4 bg-red-100/50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center justify-between">
+        <div class="flex items-center">
+            <svg class="h-5 w-5 text-red-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
             </svg>
-            <span class="text-red-700 dark:text-red-300">{{ error }}</span>
+            <span class="text-red-800 dark:text-red-200">{{ error }}</span>
         </div>
-        <button @click="show = false" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors p-1">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
+        <button @click="show = false" class="text-red-500 hover:text-red-700">&times;</button>
     </div>
     {% endif %}
 
     {% if success %}
     <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 -translate-y-2"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 -translate-y-2"
-         class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <svg class="h-5 w-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        class="mb-6 p-4 bg-green-100/50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-lg flex items-center justify-between">
+        <div class="flex items-center">
+            <svg class="h-5 w-5 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
             </svg>
-            <span class="text-green-700 dark:text-green-300">{{ success }}</span>
+            <span class="text-green-800 dark:text-green-200">{{ success }}</span>
         </div>
-        <button @click="show = false" class="text-green-400 hover:text-green-600 dark:hover:text-green-300 transition-colors p-1">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
+        <button @click="show = false" class="text-green-500 hover:text-green-700">&times;</button>
     </div>
     {% endif %}
 
-    <!-- Stats Cards -->
+    <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <!-- Status Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl mr-4">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </div>
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
-                    <div class="mt-2 flex items-center space-x-2">
-                        <template x-if="isRunning">
-                            <span class="relative flex h-3 w-3">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                            </span>
-                        </template>
-                        <template x-if="!isRunning">
-                            <span class="h-3 w-3 rounded-full bg-green-500"></span>
-                        </template>
-                        <span class="text-lg font-semibold" :class="isRunning ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'" x-text="isRunning ? 'Running' : 'Idle'"></span>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Scraper Status</p>
+                    <div class="flex items-center mt-1">
+                        <span class="h-2 w-2 rounded-full mr-2"
+                            :class="isRunning ? 'bg-amber-500 animate-pulse' : 'bg-gray-400'"></span>
+                        <p class="text-lg font-bold"
+                            :class="isRunning ? 'text-amber-600' : 'text-gray-600 dark:text-gray-400'"
+                            x-text="isRunning ? 'Running' : 'Idle'"></p>
                     </div>
                 </div>
-                <div class="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
-                    <svg class="h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl mr-4">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total Contacts</p>
+                    <p class="text-2xl font-bold dark:text-white" x-text="contactCount"></p>
                 </div>
             </div>
         </div>
-
-        <!-- Contacts Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Contacts Found</p>
-                    <p class="mt-2 text-3xl font-bold text-gray-900 dark:text-white" x-text="contactCount">{{ count }}</p>
-                </div>
-                <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                    <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl mr-4">
+                    <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </div>
-            </div>
-        </div>
-
-        <!-- Search Info Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Search</p>
-                    <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white truncate">{{ config.search_term or 'Not configured' }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ config.locations|length }} location(s)</p>
-                </div>
-                <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                    <svg class="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Search Term</p>
+                    <p class="text-lg font-bold dark:text-white truncate max-w-[150px]">{{ config.SEARCH_TERM or 'None'
+                        }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Controls -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
+    <!-- Actions Panel -->
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex flex-wrap gap-3">
-                <template x-if="isRunning">
-                    <form action="/scraper/stop" method="POST" class="inline">
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors shadow-sm">
-                            <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
-                            </svg>
-                            Stop Scraper
-                        </button>
-                    </form>
-                </template>
-                <template x-if="!isRunning">
-                    <form action="/scraper/start" method="POST" class="inline">
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors shadow-sm">
-                            <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            Start Scraper
-                        </button>
-                    </form>
-                </template>
-                <form action="/scraper/restart" method="POST" class="inline">
-                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors shadow-sm">
-                        <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            <div class="flex gap-3">
+                <form action="/scraper/start" method="POST" x-show="!isRunning" x-cloak>
+                    <button type="submit"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-xl font-medium transition-all shadow-lg hover:shadow-green-500/20 flex items-center">
+                        <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                         </svg>
+                        Start Scraper
+                    </button>
+                </form>
+                <form action="/scraper/stop" method="POST" x-show="isRunning" x-cloak>
+                    <button type="submit"
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-xl font-medium transition-all shadow-lg hover:shadow-red-500/20 flex items-center">
+                        <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 011-1h2a1 1 0 110 2H9v1h2a1 1 0 110 2H9v1h2a1 1 0 110 2H9v1h2a1 1 0 110 2H9v1z" />
+                        </svg>
+                        Stop Scraper
+                    </button>
+                </form>
+                <form action="/scraper/restart" method="POST">
+                    <button type="submit"
+                        class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-6 py-2 rounded-xl font-medium transition-all">
                         Restart
                     </button>
                 </form>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="/download/csv" class="inline-flex items-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors shadow-sm">
-                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Download CSV
-                </a>
-                <a href="/download/json" class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors shadow-sm">
-                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Download JSON
-                </a>
-                <form action="/clear" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to clear all data?')">
-                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors">
-                        <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Clear Data
-                    </button>
+            <div class="flex gap-3">
+                <a href="/download/csv"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-all">Download
+                    CSV</a>
+                <form action="/clear" method="POST" onsubmit="return confirm('Clear all data?')">
+                    <button type="submit"
+                        class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-red-500 px-4 py-2 rounded-xl transition-all">Clear
+                        All</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Live Logs Panel -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-8 overflow-hidden">
-        <button @click="logsOpen = !logsOpen; if(logsOpen) fetchLogs()" 
-                class="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <svg class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                </div>
-                <div class="text-left">
-                    <h3 class="font-semibold text-gray-900 dark:text-white">Live Logs</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">View scraper activity in real-time</p>
-                </div>
+    <!-- Logs Viewer -->
+    <div class="bg-gray-900 rounded-2xl shadow-xl overflow-hidden mb-8 border border-gray-800">
+        <div class="px-6 py-4 bg-gray-800/50 flex items-center justify-between border-b border-gray-800">
+            <div class="flex items-center">
+                <div class="h-2 w-2 bg-green-500 rounded-full mr-3 animate-pulse"></div>
+                <h3 class="text-gray-200 font-bold uppercase tracking-wider text-sm">System Logs</h3>
             </div>
-            <div class="flex items-center space-x-3">
-                <span x-show="isRunning" class="px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                    Live
-                </span>
-                <svg class="h-5 w-5 text-gray-400 transition-transform duration-300" :class="{ 'rotate-180': logsOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
+            <div class="flex gap-4 text-xs">
+                <label class="flex items-center text-gray-400 cursor-pointer"><input type="checkbox"
+                        x-model="autoRefresh" class="mr-2"> Refresh</label>
+                <label class="flex items-center text-gray-400 cursor-pointer"><input type="checkbox"
+                        x-model="autoScroll" class="mr-2"> Scroll</label>
             </div>
-        </button>
-        
-        <div x-show="logsOpen" 
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 -translate-y-2"
-             x-transition:enter-end="opacity-100 translate-y-0"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 translate-y-0"
-             x-transition:leave-end="opacity-0 -translate-y-2"
-             class="border-t border-gray-100 dark:border-gray-700">
-            <!-- Log Controls -->
-            <div class="p-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center space-x-4">
-                    <label class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
-                        <input type="checkbox" x-model="autoScroll" class="rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500">
-                        <span>Auto-scroll</span>
-                    </label>
-                    <label class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
-                        <input type="checkbox" x-model="autoRefresh" class="rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500">
-                        <span>Auto-refresh</span>
-                    </label>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button @click="fetchLogs()" class="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 transition-colors">
-                        Refresh
-                    </button>
-                    <button @click="clearLogs()" class="px-3 py-1.5 text-sm bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 transition-colors">
-                        Clear View
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Log Content -->
-            <div x-ref="logContainer" class="h-80 overflow-y-auto bg-gray-900 p-4 font-mono text-sm leading-relaxed">
-                <template x-if="logs.length === 0">
-                    <p class="text-gray-500">No logs yet. Start the scraper to see activity.</p>
-                </template>
-                <template x-for="(line, index) in logs" :key="index">
-                    <div class="py-0.5 whitespace-pre-wrap break-all" :class="getLogClass(line)" x-text="line"></div>
-                </template>
-            </div>
+        </div>
+        <div x-ref="logContainer" class="h-64 overflow-y-auto p-4 font-mono text-sm leading-relaxed text-gray-300">
+            <template x-for="line in logs">
+                <div class="py-0.5" :style="getLogStyle(line)" x-text="line"></div>
+            </template>
         </div>
     </div>
 
-    <!-- Data Table with Virtual Scrolling -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center space-x-3">
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Scraped Contacts</h2>
-                    <span class="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full" x-text="filteredContacts.length + ' of ' + contacts.length"></span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <input type="text" x-model="searchQuery" @input="currentPage = 0" placeholder="Search contacts..."
-                               class="pl-10 pr-4 py-2 w-64 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                        <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
-                    </div>
-                    <select x-model="pageSize" @change="currentPage = 0" class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
-                        <option value="25">25 rows</option>
-                        <option value="50">50 rows</option>
-                        <option value="100">100 rows</option>
-                    </select>
-                </div>
-            </div>
+    <!-- Data Table -->
+    <div
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div
+            class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+            <h3 class="font-bold text-gray-900 dark:text-white">Extracted Contacts</h3>
+            <input type="text" x-model="search" placeholder="Filter contacts..."
+                class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-1.5 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
-
-        <template x-if="contacts.length > 0">
-            <div>
-                <div class="overflow-x-auto max-h-[500px] overflow-y-auto" x-ref="tableContainer">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Website</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            <template x-for="(row, index) in paginatedContacts" :key="index">
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="font-medium text-gray-900 dark:text-white" x-text="row.Company || '-'"></span>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <a :href="'mailto:' + row.Email" class="text-primary-600 dark:text-primary-400 hover:underline" x-text="row.Email"></a>
-                                    </td>
-                                    <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
-                                        <template x-if="row.Phone">
-                                            <a :href="'tel:' + row.Phone" class="hover:text-primary-600 dark:hover:text-primary-400" x-text="row.Phone"></a>
-                                        </template>
-                                        <template x-if="!row.Phone">
-                                            <span>-</span>
-                                        </template>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <template x-if="row.Website">
-                                            <a :href="row.Website" target="_blank" class="text-primary-600 dark:text-primary-400 hover:underline truncate block max-w-xs" x-text="row.Website.length > 40 ? row.Website.substring(0, 40) + '...' : row.Website"></a>
-                                        </template>
-                                        <template x-if="!row.Website">
-                                            <span class="text-gray-400">-</span>
-                                        </template>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Pagination -->
-                <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Showing <span class="font-medium" x-text="currentPage * pageSize + 1"></span> to 
-                        <span class="font-medium" x-text="Math.min((currentPage + 1) * pageSize, filteredContacts.length)"></span> of 
-                        <span class="font-medium" x-text="filteredContacts.length"></span> results
-                    </p>
-                    <div class="flex items-center space-x-2">
-                        <button @click="currentPage = Math.max(0, currentPage - 1)" :disabled="currentPage === 0"
-                                class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-200">
-                            Previous
-                        </button>
-                        <span class="text-sm text-gray-600 dark:text-gray-300" x-text="'Page ' + (currentPage + 1) + ' of ' + totalPages"></span>
-                        <button @click="currentPage = Math.min(totalPages - 1, currentPage + 1)" :disabled="currentPage >= totalPages - 1"
-                                class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-200">
-                            Next
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </template>
-
-        <template x-if="contacts.length === 0">
-            <div class="p-12 text-center">
-                <svg class="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                </svg>
-                <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No contacts yet</h3>
-                <p class="mt-2 text-gray-500 dark:text-gray-400">Configure your search and start the scraper to find contacts.</p>
-                <a href="/config" class="mt-4 inline-flex items-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors">
-                    Configure Search
-                </a>
-            </div>
-        </template>
+        <div class="overflow-x-auto max-h-[600px]">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-900 transition-colors sticky top-0 z-10">
+                    <tr>
+                        <th class="px-6 py-4 font-semibold text-gray-600 dark:text-gray-400">Company</th>
+                        <th class="px-6 py-4 font-semibold text-gray-600 dark:text-gray-400">Email</th>
+                        <th class="px-6 py-4 font-semibold text-gray-600 dark:text-gray-400">Phone</th>
+                        <th class="px-6 py-4 font-semibold text-gray-600 dark:text-gray-400 text-right">Website</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 transition-colors">
+                    <template x-for="row in filteredData">
+                        <tr class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+                            <td class="px-6 py-4 font-medium dark:text-white" x-text="row.Company"></td>
+                            <td class="px-6 py-4"><a :href="'mailto:'+row.Email"
+                                    class="text-blue-600 dark:text-blue-400 hover:underline" x-text="row.Email"></a>
+                            </td>
+                            <td class="px-6 py-4 text-gray-500 dark:text-gray-400" x-text="row.Phone || '-'"></td>
+                            <td class="px-6 py-4 text-right">
+                                <a :href="row.Website" target="_blank" class="text-gray-400 hover:text-blue-500">
+                                    <svg class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function dashboard() {
-    return {
-        searchQuery: '',
-        contactCount: {{ count }},
-        isRunning: {{ 'true' if running else 'false' }},
-        logsOpen: false,
-        logs: [],
-        autoScroll: true,
-        autoRefresh: true,
-        logPollInterval: null,
-        
-        // Contacts & Pagination
-        contacts: [],
-        currentPage: 0,
-        pageSize: 25,
-        
-        get filteredContacts() {
-            if (!this.searchQuery.trim()) return this.contacts;
-            const query = this.searchQuery.toLowerCase();
-            return this.contacts.filter(row => 
-                (row.Company || '').toLowerCase().includes(query) ||
-                (row.Email || '').toLowerCase().includes(query) ||
-                (row.Phone || '').toLowerCase().includes(query) ||
-                (row.Website || '').toLowerCase().includes(query)
-            );
-        },
-        
-        get totalPages() {
-            return Math.max(1, Math.ceil(this.filteredContacts.length / this.pageSize));
-        },
-        
-        get paginatedContacts() {
-            const start = this.currentPage * this.pageSize;
-            return this.filteredContacts.slice(start, start + this.pageSize);
-        },
-        
-        init() {
-            this.fetchContacts();
-            this.pollStatus();
-            this.$watch('logsOpen', (value) => {
-                if (value && this.autoRefresh) {
-                    this.startLogPolling();
-                } else {
-                    this.stopLogPolling();
-                }
-            });
-            this.$watch('autoRefresh', (value) => {
-                if (value && this.logsOpen) {
-                    this.startLogPolling();
-                } else {
-                    this.stopLogPolling();
-                }
-            });
-        },
-        
-        async fetchContacts() {
-            try {
-                const res = await fetch('/api/data');
-                const data = await res.json();
-                this.contacts = data.data || [];
-                this.contactCount = this.contacts.length;
-            } catch (e) {
-                console.error('Failed to fetch contacts:', e);
-            }
-        },
-        
-        async pollStatus() {
-            try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
-                const prevCount = this.contactCount;
-                this.contactCount = data.count;
-                const wasRunning = this.isRunning;
-                this.isRunning = data.running;
-                
-                // Refresh contacts if count changed or scraper just finished
-                if (data.count !== prevCount || (wasRunning && !data.running)) {
-                    this.fetchContacts();
-                    this.fetchLogs();
-                }
-            } catch (e) {
-                console.error('Status poll error:', e);
-            }
-            setTimeout(() => this.pollStatus(), 3000);
-        },
-        
-        startLogPolling() {
-            if (this.logPollInterval) return;
-            this.fetchLogs();
-            this.logPollInterval = setInterval(() => this.fetchLogs(), 2000);
-        },
-        
-        stopLogPolling() {
-            if (this.logPollInterval) {
-                clearInterval(this.logPollInterval);
-                this.logPollInterval = null;
-            }
-        },
-        
-        async fetchLogs() {
-            try {
-                const res = await fetch('/api/logs?lines=200');
-                const data = await res.json();
-                if (data.logs && data.logs !== 'No logs yet') {
-                    this.logs = data.logs.split('\n').filter(line => line.trim());
-                    if (this.autoScroll) {
-                        this.$nextTick(() => {
-                            const container = this.$refs.logContainer;
-                            if (container) {
-                                container.scrollTop = container.scrollHeight;
-                            }
-                        });
+    function dashboard(initialState) {
+        return {
+            isRunning: initialState.running,
+            contactCount: initialState.count,
+            search: '',
+            contacts: [],
+            logs: [],
+            autoRefresh: true,
+            autoScroll: true,
+
+            async init() {
+                await this.refreshData();
+                this.pollStatus();
+                this.pollLogs();
+            },
+
+            get filteredData() {
+                if (!this.search) return this.contacts;
+                const q = this.search.toLowerCase();
+                return this.contacts.filter(c =>
+                    Object.values(c).some(v => String(v).toLowerCase().includes(q))
+                );
+            },
+
+            async refreshData() {
+                try {
+                    const res = await fetch('/api/data');
+                    const json = await res.json();
+                    this.contacts = json.data;
+                    this.contactCount = json.count;
+                } catch (e) { }
+            },
+
+            async pollStatus() {
+                if (!this.autoRefresh) return setTimeout(() => this.pollStatus(), 3000);
+                try {
+                    const res = await fetch('/api/status');
+                    const json = await res.json();
+                    if (this.contactCount !== json.count) this.refreshData();
+                    this.isRunning = json.running;
+                } catch (e) { }
+                setTimeout(() => this.pollStatus(), 3000);
+            },
+
+            async pollLogs() {
+                if (!this.autoRefresh) return setTimeout(() => this.pollLogs(), 2000);
+                try {
+                    const res = await fetch('/api/logs?lines=100');
+                    const json = await res.json();
+                    if (json.logs) {
+                        this.logs = json.logs.split('\n').filter(l => l.trim());
+                        if (this.autoScroll) {
+                            this.$nextTick(() => {
+                                const el = this.$refs.logContainer;
+                                el.scrollTop = el.scrollHeight;
+                            });
+                        }
                     }
-                }
-            } catch (e) {
-                console.error('Log fetch error:', e);
+                } catch (e) { }
+                setTimeout(() => this.pollLogs(), 2000);
+            },
+
+            getLogStyle(line) {
+                if (line.includes('[INFO]')) return 'color: #10b981';
+                if (line.includes('[ERROR]')) return 'color: #ef4444';
+                if (line.includes('[WARNING]')) return 'color: #f59e0b';
+                if (line.includes('Found:')) return 'color: #3b82f6; font-weight: bold';
+                return '';
             }
-        },
-        
-        clearLogs() {
-            this.logs = [];
-        },
-        
-        getLogClass(line) {
-            if (line.includes('[ERROR]')) return 'text-red-400';
-            if (line.includes('[WARNING]')) return 'text-yellow-400';
-            if (line.includes('[INFO]')) return 'text-green-400';
-            if (line.includes('Found:')) return 'text-cyan-400 font-semibold';
-            if (line.includes('Done!')) return 'text-green-400 font-semibold';
-            return 'text-gray-300';
         }
     }
-}
 </script>
 {% endblock %}

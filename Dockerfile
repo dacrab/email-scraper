@@ -9,26 +9,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl unzip procps \
+    ca-certificates curl procps \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt ./
-RUN python -m pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt \
+RUN pip install --no-cache-dir -r requirements.txt \
   && python -m playwright install --with-deps chromium
 
-COPY config.py ./
-COPY scraper.py ./
-COPY config.json ./
-COPY start.sh ./
-COPY app.py ./
+# Copy all relevant files
+COPY config.py scraper.py app.py constants.py start.sh ./
 COPY templates ./templates/
 COPY static ./static/
 
-RUN chmod +x /app/start.sh && useradd -m -u 1000 appuser && chown -R appuser:appuser /app /ms-playwright
+RUN chmod +x /app/start.sh \
+    && useradd -m -u 1000 appuser \
+    && chown -R appuser:appuser /app /ms-playwright
+
 USER appuser
-
 EXPOSE 8000
-
 CMD ["/app/start.sh"]
