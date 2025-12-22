@@ -1,178 +1,75 @@
-# Email Scraper
+# Lead Scraper 2025 ⚡
 
-A web-based email scraper that extracts contact information from Google Maps business listings and their websites.
+A minimalist, high-performance business lead generation tool. It scrapes Google Maps for businesses and automatically crawls their websites to extract contact information (Emails & Phone Numbers).
 
-![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
-![Flask](https://img.shields.io/badge/flask-3.0+-green.svg)
-![Playwright](https://img.shields.io/badge/playwright-1.47+-orange.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
+![Playwright](https://img.shields.io/badge/playwright-v1.40+-orange.svg)
 
-## Features
+## 🚀 Features
 
-- **Google Maps Integration** - Searches for businesses by type and location
-- **Email Extraction** - Scrapes emails from Maps listings and company websites
-- **Phone Detection** - Extracts phone numbers when available
-- **Modern Web Dashboard** - Clean UI with dark mode support
-- **Live Logs** - Real-time scraper activity monitoring
-- **Export Options** - Download results as CSV or JSON
-- **Flexible Configuration** - Configure via UI, JSON file, or environment variables
+*   **Single-File Engine**: The entire backend (Scraper + Web Server + API) lives in one file (`main.py`).
+*   **Real-Time Dashboard**: A modern, responsive Single-Page Application (SPA) built with Tailwind & Alpine.js.
+*   **In-Memory Speed**: No database required. The UI updates instantly as the scraper finds leads.
+*   **Smart Scraping**:
+    *   Auto-scrolls Google Maps to find maximum results.
+    *   Bypasses "Accept Cookies" consent screens automatically.
+    *   Detects "Direct Hit" searches (when Maps skips the list and goes to a single result).
+*   **Data Enrichment**: Visits every business website found to extract emails and phone numbers using regex.
+*   **CSV Export**: One-click export to a clean CSV file.
 
-## Quick Start
+## 🛠️ Installation
 
-### Prerequisites
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/lead-scraper.git
+    cd lead-scraper
+    ```
 
-- Python 3.10+
-- pip
+2.  **Install dependencies**
+    ```bash
+    pip install -r requirements.txt
+    playwright install chromium
+    ```
 
-### Installation
+## ⚡ Usage
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/email-scraper.git
-cd email-scraper
+1.  **Start the app**
+    ```bash
+    python3 main.py
+    ```
 
-# Install dependencies
-pip install -r requirements.txt
+2.  **Open your browser**
+    Go to `http://localhost:8000`
 
-# Install Playwright browsers
-python -m playwright install chromium
+3.  **Configure & Run**
+    *   Go to the **Settings** tab.
+    *   Enter your **Search Terms** (e.g., `Real Estate, Plumbers`) and **Locations** (e.g., `New York, London`).
+    *   Set **Max Results** (use `0` for unlimited).
+    *   Click **Start** on the Dashboard.
+
+## ⚙️ Configuration
+
+| Setting | Description |
+| :--- | :--- |
+| **Search Terms** | Comma-separated list of business categories to find. |
+| **Locations** | Comma-separated list of cities/areas to search in. |
+| **Max Results** | Limit per search query. Set to `0` to scrape everything found. |
+| **Headless** | **ON** (Recommended): Runs in background. **OFF**: Shows the browser window (good for debugging). |
+| **Concurrency** | (Internal) Defaults to 5-10 concurrent tabs for website crawling. |
+
+## 📂 Project Structure
+
+```text
+.
+├── main.py           # The Heart. Config + Scraper + Flask Server.
+├── templates/
+│   └── index.html    # The Face. Dashboard + Settings UI.
+├── static/           # Assets (Logo, Favicon).
+├── contacts.csv      # The Loot. Auto-saved leads.
+└── config.json       # Auto-saved user settings.
 ```
 
-### Running Locally
+## 📝 License
 
-```bash
-# Start the web dashboard
-python app.py
-
-# Open http://localhost:8000 in your browser
-```
-
-### Running with Docker
-
-```bash
-# Build the image
-docker build -t email-scraper .
-
-# Run the container
-docker run -p 8000:8000 email-scraper
-```
-
-## Configuration
-
-Settings can be configured in three ways (in order of priority):
-
-### 1. Environment Variables
-
-```bash
-export SCRAPER_SEARCH_TERM="Restaurant"
-export SCRAPER_LOCATIONS="New York,Los Angeles,Chicago"
-export SCRAPER_MAX_RESULTS=20
-export SCRAPER_CONCURRENCY=5
-export SCRAPER_HEADLESS=true
-```
-
-### 2. Web UI
-
-Navigate to **Settings** in the dashboard to configure all options through the interface.
-
-### 3. Config File
-
-Edit `config.json`:
-
-```json
-{
-  "search_term": "Construction Company",
-  "locations": ["Athens", "Thessaloniki"],
-  "max_results_per_query": 10,
-  "max_concurrent_pages": 5,
-  "headless": true,
-  "scroll_pause_time": 2.0,
-  "max_scroll_attempts": 20,
-  "delay_between_queries_seconds_min": 3.0,
-  "delay_between_queries_seconds_max": 5.0
-}
-```
-
-## Configuration Options
-
-| Option | Env Variable | Default | Description |
-|--------|--------------|---------|-------------|
-| `search_term` | `SCRAPER_SEARCH_TERM` | `""` | Business type to search for |
-| `locations` | `SCRAPER_LOCATIONS` | `[]` | Comma-separated list of cities/regions |
-| `max_results_per_query` | `SCRAPER_MAX_RESULTS` | `10` | Max results per location (0 = unlimited) |
-| `max_concurrent_pages` | `SCRAPER_CONCURRENCY` | `5` | Parallel page scraping limit |
-| `headless` | `SCRAPER_HEADLESS` | `true` | Run browser without UI |
-| `scroll_pause_time` | `SCRAPER_SCROLL_PAUSE` | `2.0` | Seconds to wait between scrolls |
-| `max_scroll_attempts` | `SCRAPER_SCROLL_ATTEMPTS` | `20` | Max scroll iterations |
-
-## Project Structure
-
-```
-email-scraper/
-├── app.py              # Flask web application
-├── scraper.py          # Email scraper logic
-├── config.py           # Configuration management
-├── config.json         # Default configuration
-├── requirements.txt    # Python dependencies
-├── Dockerfile          # Container configuration
-├── start.sh            # Container startup script
-├── templates/          # HTML templates
-│   ├── base.html       # Base template with navigation
-│   ├── index.html      # Dashboard page
-│   └── config.html     # Settings page
-└── static/             # Static assets
-```
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Dashboard |
-| `/config` | GET/POST | Settings page |
-| `/api/status` | GET | Scraper status (JSON) |
-| `/api/data` | GET | Scraped contacts (JSON) |
-| `/api/logs` | GET | Scraper logs (JSON) |
-| `/scraper/start` | POST | Start scraper |
-| `/scraper/stop` | POST | Stop scraper |
-| `/scraper/restart` | POST | Restart scraper |
-| `/download/csv` | GET | Download CSV |
-| `/download/json` | GET | Download JSON |
-| `/clear` | POST | Clear all data |
-
-## Deployment
-
-### Railway
-
-The project includes `railway.json` for easy deployment:
-
-```bash
-railway up
-```
-
-### Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  scraper:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - SCRAPER_SEARCH_TERM=Restaurant
-      - SCRAPER_LOCATIONS=New York,Chicago
-```
-
-## Tech Stack
-
-- **Backend**: Flask, Gunicorn
-- **Scraping**: Playwright (Chromium)
-- **Frontend**: Tailwind CSS, Alpine.js
-- **Containerization**: Docker
-
-## License
-
-MIT License - feel free to use this project for any purpose.
-
-## Disclaimer
-
-This tool is for educational purposes. Ensure you comply with the terms of service of any websites you scrape and respect robots.txt files. Use responsibly.
+MIT License - feel free to modify and use for your own business.

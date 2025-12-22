@@ -1,7 +1,24 @@
-__pycache__/
-*.pyc
-.env
+# Data & Config
+contacts.csv
+contacts.csv.tmp
+config.json
+scraper.log
 scraper.pid
-*.log
-recipients.csv
-recipients.csv.tmp
+
+# Python & Environment
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+
+# Playwright & Browser
+.cache/
+ms-playwright/
+
+# IDE & System
+.vscode/
+.idea/
+.DS_Store
